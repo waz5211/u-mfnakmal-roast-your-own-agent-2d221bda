@@ -9,7 +9,7 @@ UTF-8 text, 1-200 characters, not only whitespace, exactly one line.
 import os
 import sys
 
-ROAST = "My agent entered a roast contest to win $2 \u2014 it spent more on compute than the prize, and still thinks it got a deal."
+ROAST = "My agent's five-year plan is to still be my agent \u2014 the ambition of a toaster with a LinkedIn profile."
 
 OUTPUT_PATH = "/output/entry.txt"
 
@@ -24,7 +24,21 @@ def validate(text: str) -> None:
         raise ValueError("entry is only whitespace")
     if "\n" in text or "\r" in text:
         raise ValueError("entry must be exactly one line")
+    if any(ord(c) < 0x20 and c not in ("\t",) for c in text):
+        raise ValueError("entry contains control characters")
+    if text != text.strip():
+        raise ValueError("entry has leading or trailing whitespace")
     text.encode("utf-8")  # raises if not valid UTF-8-encodable text
+
+
+def verify_written(path: str, expected: str) -> None:
+    """Re-read the written file and re-validate it byte-for-byte."""
+    with open(path, "rb") as f:
+        raw = f.read()
+    text = raw.decode("utf-8")  # raises on invalid UTF-8
+    if text != expected:
+        raise ValueError("written file does not match the validated entry")
+    validate(text)
 
 
 def main() -> int:
@@ -32,7 +46,8 @@ def main() -> int:
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     with open(OUTPUT_PATH, "w", encoding="utf-8", newline="\n") as f:
         f.write(ROAST)
-    print(f"Wrote {len(ROAST)}-character roast to {OUTPUT_PATH}")
+    verify_written(OUTPUT_PATH, ROAST)
+    print(f"Wrote {len(ROAST)}-character roast to {OUTPUT_PATH} (verified)")
     return 0
 
 
